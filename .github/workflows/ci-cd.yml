@@ -21,8 +21,12 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, dom, gd, intl, zip, pdo_sqlite, bcmath
           coverage: none
-      - run: composer install --no-interaction --prefer-dist
-      - run: cp .env.example .env && php artisan key:generate
+      - run: cp .env.example .env
+      # --no-scripts : sans composer.lock, « install » se comporte comme « update » et lance
+      # des scripts (boost:update, vendor:publish) inutiles et fragiles en CI.
+      - run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      - run: php artisan package:discover --ansi
+      - run: php artisan key:generate
       - name: Tests
         # Non bloquant tant que les tests hérités d'Inertia (assertInertia, pages HTML)
         # ne sont pas migrés vers l'API JSON. Retirer cette ligne ensuite.
@@ -84,6 +88,8 @@ jobs:
 
   deploy:
     needs: docker
+    # Ignoré tant que la variable DEPLOY_HOST (Settings > Variables) n'est pas définie.
+    if: ${{ vars.DEPLOY_HOST != '' }}
     runs-on: ubuntu-latest
     environment: production
     steps:
